@@ -1,0 +1,485 @@
+<!-- Updated full explore.html with single flashcard system -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Medicinal Plants Gallery</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: url('https://i.pinimg.com/736x/68/ff/20/68ff20a1298c63db482b8fd37566ad90.jpg') no-repeat center center fixed;
+      background-size: cover;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .search-bar {
+      width: 60%;
+      margin-bottom: 30px;
+      display: flex;
+      gap: 10px;
+    }
+    .search-bar input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    .gallery-container {
+      width: auto;
+      display: grid;
+      grid-template-columns: repeat(3, 300px);
+      gap: 30px;
+    }
+    .plant-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      text-align: center;
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+    .plant-card:hover {
+      transform: translateY(-5px);
+    }
+    .plant-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+    .plant-info {
+      padding: 15px;
+    }
+    .plant-info h3 {
+      margin: 10px 0 5px;
+      font-size: 20px;
+      color: #2e7d32;
+    }
+    .plant-info p {
+      font-size: 15px;
+      color: #555;
+    }
+    .flashcard-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    .flashcard {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      height: 85vh;
+      width: 80vw;
+      max-width: 900px;
+      text-align: left;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: repeat(2, 1fr);
+      gap: 15px;
+      position: relative;
+    }
+    .flashcard-section {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 10px;
+      overflow: auto;
+    }
+    #modelFrame { height: 100%; width: 100%; }
+    #plantInfo { text-align: justify; }
+    #mediaGallery { display: flex; overflow-x: auto; gap: 10px; }
+    #mediaGallery img { height: 180px; border-radius: 8px; }
+    #mediaGallery iframe { height: 180px; }
+    #section-notes textarea {
+      width: 100%; height: 100px; margin-bottom: 10px;
+      border-radius: 8px; padding: 10px; border: 1px solid #ccc;
+    }
+    .note-actions button {
+      margin-right: 10px; padding: 8px 12px;
+      border: none; border-radius: 6px;
+      background-color: #1e88e5; color: white;
+      cursor: pointer;
+    }
+    .close-btn {
+      position: absolute; top: 10px; right: 20px;
+      padding: 6px 10px; font-size: 18px;
+      background: transparent; color: #d9534f;
+      border: none; cursor: pointer; z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="search-bar">
+    <input type="text" id="searchName" placeholder="Search by Name">
+    <input type="text" id="searchRegion" placeholder="Search by Region">
+    <input type="text" id="searchUse" placeholder="Search by Use Case (e.g., sleep, skin, digestion)">
+  </div>
+  <div class="gallery-container" id="galleryContainer"></div>
+
+  <div class="flashcard-overlay" id="flashcardOverlay">
+    <div class="flashcard">
+      <button class="close-btn" onclick="closeFlashcard()">&#10005;</button>
+      <div class="flashcard-section" id="section-model">
+        <iframe id="modelFrame" title="Plant 3D Model" frameborder="0" allowfullscreen></iframe>
+      </div>
+      <div class="flashcard-section" id="section-info">
+        <h3>Plant Information</h3>
+        <div id="plantInfo"></div>
+        <audio controls id="plantAudio" style="margin-top: 10px; width: 100%;"></audio>
+      </div>
+      <div class="flashcard-section" id="section-media">
+        <h3>Media</h3>
+        <div id="mediaGallery"></div>
+      </div>
+      <div class="flashcard-section" id="section-notes">
+        <h3>Notes:</h3>
+        <textarea id="notesInput" placeholder="Write your notes here..."></textarea>
+        <div class="note-actions">
+          <button onclick="saveNotes()">💾 Download</button>
+          <button onclick="navigator.share ? navigator.share({ text: document.getElementById('notesInput').value }) : alert('Share not supported')">📤 Share</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+   const baseAsset = "{{ url_for('static', filename='assets/') }}";
+    const plantData = {
+      'Ashwagandha': {
+  image: baseAsset + 'images/ashwagandha2.png',
+  description: 'Adaptogenic herb for stress relief and vitality.',
+  modelUrl: 'https://sketchfab.com/models/88b1bf03a6254dc2b56cec4dce3f22f1/embed',
+  audioSrc: baseAsset +'audio/ashwaganda.mp3',
+  media: [
+    baseAsset +'images/ashwagandha2.png',
+    baseAsset +'images/ashwagandha3.png',
+    baseAsset +'images/ashwagandha4.png',
+    'https://www.youtube.com/embed/1E9BYSUcvhk?si=saY8B1c_gKHawRHF'
+  ],
+  info: `<b>Region:</b> Arid<br>
+<b>Common Names:</b> Sanskrit: Ashwagandha, Hindi: Asgandh, English: Indian Ginseng, Tamil: Amukkara<br>
+<b>Type:</b> Shrub<br>
+<b>Habitat:</b> Dry, subtropical regions<br>
+<b>Medicinal Uses:</b>
+<ul><li>Stress relief</li><li>Energy booster</li><li>Improves cognition</li><li>Enhances immunity</li><li>Anti-inflammatory</li><li>Sleep aid</li><li>Hormonal balance</li></ul>
+<b>Cultivation:</b>
+<ul><li>Grows in dry, rocky soils</li><li>Temperature: 20–35°C</li><li>Well-drained soil, pH 7.5–8</li><li>Minimal irrigation</li><li>Harvest after 150–180 days</li></ul>
+<b>Side Effects:</b>
+<ul><li>GI upset in high doses</li><li>Avoid during pregnancy</li></ul>`
+},
+'Aloe Vera': {
+  image:baseAsset+ 'images/aloevera.png',
+  description: 'Soothing and healing plant.',
+  modelUrl: 'https://sketchfab.com/models/66c6699e50ab4863989777f920a981dd/embed',
+  audioSrc: baseAsset +'audio/aloe vera.mp3',
+  media: [
+    baseAsset +'images/aloevera2.png',
+    baseAsset +'images/aloevera3.png',
+    baseAsset +'images/aloevera4.png',
+    baseAsset +'images/aloevera.png',
+    'https://www.youtube.com/embed/O4LQdTgUui8?si=46vVsCng94BSGPix'
+  ],  
+  info: `<b>Region:</b> Tropical<br>
+<b>Common Names:</b> English: Aloe Vera, Hindi: Ghritkumari, Tamil: Sotru Katralai<br>
+<b>Type:</b> Succulent<br>
+<b>Habitat:</b> Arid and semi-arid regions<br>
+<b>Medicinal Uses:</b>
+<ul><li>Skin care</li><li>Anti-inflammatory</li><li>Digestive aid</li><li>Immune booster</li><li>Wound healing</li></ul>
+<b>Cultivation:</b>
+<ul><li>Grows in warm climates (25–40°C)</li><li>Sandy, well-drained soil</li><li>Minimal water</li><li>Harvest outer leaves</li></ul>
+<b>Side Effects:</b>
+<ul><li>Latex causes cramps/diarrhea</li><li>Avoid during pregnancy</li><li>Patch test for allergy</li></ul>`
+},
+'Cactus': {
+  image: baseAsset +'images/cactus.png',
+  description: 'Desert plant with medicinal properties.',
+  modelUrl: 'https://sketchfab.com/models/01d773057954447a9abb7ae0c6c052af/embed',
+  audioSrc:baseAsset + 'audio/cactus.mp3',
+  media: [
+    baseAsset +'images/cactus2.png',
+    baseAsset +'images/cactus3.png',
+    baseAsset +'images/cactus4.png',
+    baseAsset +'images/cactus.png',
+    'https://www.youtube.com/embed/-R-rFj9Pmb8?si=5M26ZcdycfVDAAhU'
+  ],
+  info: `<b>Region:</b> Arid<br>
+<b>Common Names:</b> English: Cactus, Hindi: Nagphani<br>
+<b>Type:</b> Succulent<br>
+<b>Habitat:</b> Deserts and rocky areas<br>
+<b>Medicinal Uses:</b>
+<ul><li>Skin healing</li><li>Hydration</li><li>Anti-inflammatory</li><li>Digestive aid</li><li>Antioxidant</li></ul>
+<b>Cultivation:</b>
+<ul><li>Hot, dry climate</li><li>Sandy soil, minimal water</li><li>Propagated by cuttings</li></ul>
+<b>Side Effects:</b>
+<ul><li>Spines can injure</li><li>May cause GI upset if not prepared properly</li></ul>`
+},
+'Ginger': {
+  image: baseAsset +'images/ginger.png',
+  description: 'Boosts immunity and aids digestion.',
+  modelUrl: 'https://sketchfab.com/models/de8da99c3c1742708cd4ea858750b881/embed',
+  audioSrc: baseAsset +'audio/ginger.mp3',
+  media: [
+    baseAsset +'images/ginger2.png',
+    baseAsset +'images/ginger3.png',
+    baseAsset +'images/ginger4.png',
+    baseAsset +'images/ginger.png',
+    'https://www.youtube.com/embed/-mUeNy0rweM?si=wPZdUMndxwIGrQM9'
+  ],
+  info: `<b>Region:</b> Tropical<br>
+<b>Common Names:</b> English: Ginger, Hindi: Adrak<br>
+<b>Type:</b> Herb<br>
+<b>Habitat:</b> Tropical rainforests, loamy soils<br>
+<b>Medicinal Uses:</b>
+<ul><li>Relieves nausea</li><li>Improves digestion</li><li>Reduces inflammation</li><li>Muscle pain relief</li><li>Antioxidant</li></ul>
+<b>Cultivation:</b>
+<ul><li>Warm, humid climates (20–30°C)</li><li>Loamy, well-drained soil</li><li>Propagated by rhizomes</li><li>Consistent moisture</li></ul>`
+},
+'Hibiscus': {
+  image: baseAsset +'images/hibiscus.png',
+  description: 'Rich in antioxidants and good for skin.',
+  modelUrl: 'https://sketchfab.com/models/4517d6f8a28e492494e03cf1bee12ecf/embed',
+  audioSrc: baseAsset +'audio/hibiscuis.mp3',
+  media: [
+    baseAsset +'images/hibiscus2.png',
+    baseAsset +'images/hibiscus3.png',
+    baseAsset +'images/hibiscus4.png',
+    baseAsset +'images/hibiscus.png',
+    'https://www.youtube.com/embed/eChwCgBoReY?si=TStvS-S5EqqxgJg8'
+  ],
+  info: `<b>Region:</b> Tropical<br>
+<b>Common Names:</b> English: Hibiscus, Hindi: Gudhal<br>
+<b>Type:</b> Flowering Plant<br>
+<b>Habitat:</b> Gardens, wetlands, coastal areas<br>
+<b>Medicinal Uses:</b>
+<ul><li>Lowers blood pressure</li><li>Rich in antioxidants</li><li>Digestive aid</li><li>Anti-inflammatory</li></ul>
+<b>Cultivation:</b>
+<ul><li>Warm, sunny climates</li><li>Fertile, well-drained soil</li><li>Needs regular watering</li></ul>`
+},
+'Lavender': {
+  image: baseAsset +'images/lavender.png',
+  description: 'Promotes relaxation and sleep.',
+  modelUrl: 'https://sketchfab.com/models/08f35ae30b924678955b4bb483b86a70/embed',
+  audioSrc: baseAsset +'audio/lavender.mp3',
+  media: [
+    baseAsset +'images/lavender2.png',
+    baseAsset +'images/lavender3.png',
+    baseAsset +'images/lavender4.png',
+    baseAsset +'images/lavender.png',
+    'https://www.youtube.com/embed/nKdoBr4Xg3Y?si=1BGjfrpD80C2QweR'
+  ],
+  info: `<b>Region:</b> Mediterranean<br>
+<b>Common Names:</b> English: Lavender, Hindi: Lavandula<br>
+<b>Type:</b> Flowering Plant<br>
+<b>Habitat:</b> Sandy, well-drained soil, low humidity<br>
+<b>Medicinal Uses:</b>
+<ul><li>Stress relief</li><li>Improves sleep</li><li>Antiseptic for wounds</li><li>Digestive aid</li></ul>`
+},
+'Neem': {
+  image: baseAsset +'images/neem.png',
+  description: 'Antibacterial and antiviral properties.',
+  modelUrl: 'https://sketchfab.com/models/03edef8009d942d3a3db6fa64cecbe56/embed',
+  audioSrc: baseAsset +'audio/neem.mp3',
+  media: [
+    baseAsset +'images/neen2.png',
+    baseAsset +'images/neem3.png',
+    baseAsset +'images/neem4.png',
+    baseAsset +'images/neem.png',
+    'https://www.youtube.com/embed/M12nVqIqF4w?si=-LYy-7244HnZvi4w'
+  ],
+  info: `<b>Region:</b> Tropical<br>
+<b>Common Names:</b> English: Neem, Hindi: Neem<br>
+<b>Type:</b> Tree<br>
+<b>Habitat:</b> Dry, arid regions<br>
+<b>Medicinal Uses:</b>
+<ul><li>Fights bacteria and fungi</li><li>Treats skin conditions</li><li>Anti-inflammatory</li><li>Helps regulate blood sugar</li></ul>`
+},
+'Rosemary': {
+  image: baseAsset +'images/rosemary.png',
+  description: 'Improves concentration and memory.',
+  modelUrl: 'https://sketchfab.com/models/d5c0f249ff8a4d13840abf681bb92d29/embed',
+  audioSrc: baseAsset +'audio/rosemery.mp3',
+  media: [
+    baseAsset +'images/rosemary2.png',
+    baseAsset +'images/rosemary3.png',
+    baseAsset +'images/rosemary4.png',
+    baseAsset +'images/rosemary.png',
+    'https://www.youtube.com/embed/hEhOf6LbyOE?si=Utm-eyr-KdoSfUFf'
+  ],
+  info: `<b>Region:</b> Mediterranean<br>
+<b>Common Names:</b> English: Rosemary, Hindi: Rozmarin<br>
+<b>Type:</b> Herb<br>
+<b>Habitat:</b> Sunny locations, well-drained soil<br>
+<b>Medicinal Uses:</b>
+<ul><li>Enhances memory</li><li>Digestive support</li><li>Antioxidant</li><li>Reduces inflammation</li></ul>`
+},
+'Sage': {
+  image: baseAsset +'images/sage.png',
+  description: 'Anti-inflammatory and antibacterial.',
+  modelUrl: 'https://sketchfab.com/models/f41f028de9ca4be2b2e85df0820508ae/embed',
+  audioSrc: baseAsset +'audio/sage.mp3',  
+  media: [
+    baseAsset +'images/sage2.png',
+    baseAsset +'images/sage3.png',
+    baseAsset +'images/sage4.png',
+    baseAsset +'images/sage.png',
+    'https://www.youtube.com/embed/ya3mtAFqKzI?si=80plFZws3zKHOcBl'
+  ],
+  info: `<b>Region:</b> Temperate<br>
+<b>Common Names:</b> English: Sage, Hindi: Saji<br>
+<b>Type:</b> Herb<br>
+<b>Habitat:</b> Sunny gardens with well-drained soil<br>
+<b>Medicinal Uses:</b>
+<ul><li>Digestive aid</li><li>Reduces inflammation</li><li>Supports memory</li><li>Rich in antioxidants</li></ul>`
+},
+'Tulsi': {
+  image: baseAsset +'images/tulsi.png',
+  description: 'Sacred plant in India with health benefits.',
+  modelUrl: 'https://sketchfab.com/models/3272493ccf6c4ede895f259905ef1db8/embed',
+  audioSrc: baseAsset +'audio/tulsi.mp3',
+  media: [
+    baseAsset +'images/tulsi2.png',
+    baseAsset +'images/tulsi3.png',
+    baseAsset +'images/tulsi4.png',
+    baseAsset +'images/tulsi.png',
+    'https://www.youtube.com/embed/9sZxBVCejfc?si=mMGRvmaMPT-1OMek'
+  ],
+  info: `<b>Region:</b> Tropical<br>
+<b>Common Names:</b> English: Holy Basil, Hindi: Tulsi<br>
+<b>Type:</b> Herb<br>
+<b>Habitat:</b> Sunny gardens and pots<br>
+<b>Medicinal Uses:</b>
+<ul><li>Boosts immunity</li><li>Relieves stress</li><li>Supports respiratory health</li></ul>`
+},
+'Dandelion': {
+  image: baseAsset +'images/dandelion2.png',
+  description: 'Known for detoxifying the body.',
+  modelUrl: 'https://sketchfab.com/models/8a93f08947a4499b9ed19d2d47323242/embed',
+  audioSrc: baseAsset +'audio/dandelion.mp3',
+  media: [
+    baseAsset +'images/dandelion2.png',
+    baseAsset +'images/dandelion3.png',
+    baseAsset +'images/dandelion4.png',
+    baseAsset +'images/dandelion.png',
+    'https://www.youtube.com/embed/acGkZcEJs78?si=4pAvNNYclczR-Pyq'
+  ],
+  info: `<b>Region:</b> North America<br>
+<b>Common Names:</b> English: Dandelion, Hindi: Kukraundha<br>
+<b>Type:</b> Flowering Plant<br>
+<b>Habitat:</b> Meadows, grasslands<br>
+<b>Medicinal Uses:</b>
+<ul><li>Liver detox</li><li>Diuretic</li><li>Stimulates appetite</li><li>Anti-inflammatory</li><li>Immune booster</li></ul>`
+},
+'Eucalyptus': {
+  image: baseAsset +'images/eucalyptus.png',
+  description: 'Used in cold relief and aromatherapy.',
+  modelUrl: 'https://sketchfab.com/models/d021e7909df44e03b976c1374bfab9dc/embed',
+  audioSrc: baseAsset +'audio/ecualypus.mp3',
+  media: [
+    baseAsset +'images/eucalyptus2.png',
+    baseAsset +'images/eucalyptus3.png',
+    baseAsset +'images/eucalyptus4.png',
+    baseAsset +'images/eucalyptus.png',
+    'https://www.youtube.com/embed/jANIG0gMdVI?si=TRNrpwiv9HB-2Cw8'
+  ],
+  info: `<b>Region:</b> Temperate<br>
+<b>Common Names:</b> English: Eucalyptus, Hindi: Nilgiri<br>
+<b>Type:</b> Tree<br>
+<b>Habitat:</b> Woodlands and dry forests<br>
+<b>Medicinal Uses:</b>
+<ul><li>Clears sinuses</li><li>Reduces joint pain</li><li>Improves alertness</li><li>Wound antiseptic</li></ul>`
+}
+    };
+
+
+    const galleryContainer = document.getElementById('galleryContainer');
+    const searchName = document.getElementById('searchName');
+    const searchRegion = document.getElementById('searchRegion');
+    const searchUse = document.getElementById('searchUse');
+
+    function renderGallery(filteredData) {
+      galleryContainer.innerHTML = '';
+      for (const [name, data] of Object.entries(filteredData)) {
+        const card = document.createElement('div');
+        card.className = 'plant-card';
+        card.onclick = () => openFlashcard(name);
+        card.innerHTML = `
+          <img src="${data.image}" alt="${name}">
+          <div class="plant-info">
+            <h3>${name}</h3>
+            <p>${data.description}</p>
+          </div>`;
+        galleryContainer.appendChild(card);
+      }
+    }
+
+    function filterPlants() {
+      const nameVal = searchName.value.toLowerCase();
+      const regionVal = searchRegion.value.toLowerCase();
+      const useVal = searchUse.value.toLowerCase();
+
+      const filtered = {};
+      for (const [name, data] of Object.entries(plantData)) {
+        const info = (data.info || '').toLowerCase();
+        if (
+          name.toLowerCase().includes(nameVal) &&
+          info.includes(regionVal) &&
+          info.includes(useVal)
+        ) {
+          filtered[name] = data;
+        }
+      }
+      renderGallery(filtered);
+    }
+
+    searchName.addEventListener('input', filterPlants);
+    searchRegion.addEventListener('input', filterPlants);
+    searchUse.addEventListener('input', filterPlants);
+
+    function openFlashcard(plantName) {
+      const data = plantData[plantName];
+      if (!data) return;
+      document.getElementById('flashcardOverlay').style.display = 'flex';
+      document.getElementById('modelFrame').src = data.modelUrl || '';
+      document.getElementById('plantInfo').innerHTML = data.info || 'No information available.';
+      document.getElementById('plantAudio').src = data.audioSrc || '';
+      const mediaGallery = document.getElementById('mediaGallery');
+      mediaGallery.innerHTML = '';
+      if (data.media) {
+        data.media.forEach(item => {
+          mediaGallery.innerHTML += item.includes('youtube')
+            ? `<iframe width="300" src="${item}" frameborder="0" allowfullscreen></iframe>`
+            : `<img src="${item}" alt="media">`;
+        });
+      }
+      const savedNotes = localStorage.getItem(`${plantName}_notes`);
+      document.getElementById('notesInput').value = savedNotes || '';
+    }
+
+    function closeFlashcard() {
+      document.getElementById('flashcardOverlay').style.display = 'none';
+    }
+
+    function saveNotes() {
+      const notes = document.getElementById('notesInput').value;
+      const plantName = document.querySelector('.plant-info h3')?.innerText;
+      if (plantName) {
+        localStorage.setItem(`${plantName}_notes`, notes);
+        alert('Notes saved!');
+      }
+    }
+
+    renderGallery(plantData);
+  </script>
+</body>
+</html>

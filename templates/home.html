@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AYUSH Hex Cards</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .hex {
+      width: 260px;
+      height: 300px;
+      background: rgba(255, 255, 255, 0.95);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      cursor: pointer;
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 1.5rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      position: relative;
+    }
+    .hex:hover {
+      transform: scale(1.05);
+    }
+    .hex-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    .hex-offset {
+      margin-left: 135px; /* half of .hex width to stagger */
+    }
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      max-width: 800px;
+      background-color: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      z-index: 50;
+      display: none;
+      flex-direction: row;
+      gap: 1rem;
+    }
+    .modal img {
+      width: 200px;
+      height: auto;
+      border-radius: 0.5rem;
+    }
+    .overlay-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 40;
+      display: none;
+    }
+    .topic-image {
+      width: 300px;
+      height: auto;
+      border-radius: 1rem;
+      object-fit: cover;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-10 relative">
+
+  <!-- Background -->
+  <img src="{{ url_for('static', filename='assets/background.jpg') }}" alt="Background" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -1;
+  ">
+
+  <!-- Honeycomb Layout -->
+<div class="flex flex-col gap-6 items-center">
+  <!-- First Row -->
+  <div class="hex-row gap-12">
+    <div class="hex" onclick="openModal('Ayurveda')">
+      <span style='font-size:50px;'>&#127807;</span>
+      <h2 class="text-xl font-bold">Ayurveda</h2>
+      <p class="text-sm text-green-700 font-semibold">Find Your Balance</p>
+    </div>
+    <div class="hex" onclick="openModal('Yoga')">
+      <span style='font-size:50px;'>&#129496;</span>
+      <h2 class="text-xl font-bold">Yoga</h2>
+      <p class="text-sm text-green-700 font-semibold">Align Body and Mind</p>
+    </div>
+  </div>
+
+  <!-- Second Row with 3 hexes, staggered -->
+  <div class="hex-row hex-offset gap-12">
+    <div class="hex" onclick="openModal('Unani')">
+      <span style='font-size:50px;'>&#127800;</span>
+      <h2 class="text-xl font-bold">Unani</h2>
+      <p class="text-sm text-green-700 font-semibold">Ancient Wisdom</p>
+    </div>
+    <div class="hex" onclick="openModal('Siddha')">
+      <span style='font-size:50px;'>&#127803;</span>
+      <h2 class="text-xl font-bold">Siddha</h2>
+      <p class="text-sm text-green-700 font-semibold">Rooted in Nature</p>
+    </div>
+    <div class="hex" onclick="openModal('Homeopathy')">
+      <span style='font-size:50px;'>&#128167;</span>
+      <h2 class="text-xl font-bold">Homeopathy</h2>
+      <p class="text-sm text-green-700 font-semibold">Gentle Healing</p>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Overlay & Modal -->
+  <div id="overlay" class="overlay-bg" onclick="closeModal()"></div>
+  <div id="modal" class="modal">
+    <button class="absolute top-2 right-4 text-2xl" onclick="closeModal()">&times;</button>
+    <img id="modalImage" class="topic-image" src="" alt="Topic Image" />
+    <div>
+      <h2 id="modalTitle" class="text-2xl font-bold mb-4 text-green-700"></h2>
+      <div id="modalContent" class="text-sm space-y-3 text-gray-700"></div>
+    </div>
+  </div>
+
+  <!-- Modal Script -->
+  <script>
+    const data = {
+      Ayurveda: {
+        text: [
+          "Ayurveda is a holistic system from India over 3,000 years old.",
+          "It focuses on balance between body, mind, and spirit.",
+          "Treatments use herbs, diet, and lifestyle practices.",
+          "Each person has a unique balance of three doshas.",
+          "Ayurveda emphasizes prevention and individualized care."
+        ],
+        img: "{{ url_for('static', filename='assets/ayurvedha.jpeg') }}"
+      },
+      Yoga: {
+        text: [
+          "Yoga is a physical, mental, and spiritual discipline from India.",
+          "It combines breath control, meditation, and body postures.",
+          "Improves flexibility, strength, and peace of mind.",
+          "Yoga is practiced globally as a wellness routine.",
+          "Styles include Hatha, Vinyasa, Ashtanga, and more."
+        ],
+        img: "{{ url_for('static', filename='assets/yoga.jpg') }}"
+      },
+      Unani: {
+        text: [
+          "Unani medicine originated from Greek-Arabic systems.",
+          "Focuses on four humors: blood, phlegm, yellow and black bile.",
+          "Uses herbal medicine, dietary practices, and massage.",
+          "Unani aims to balance bodily fluids for health.",
+          "Popular in South Asia and Middle Eastern countries."
+        ],
+        img: "{{ url_for('static', filename='assets/unani.jpg') }}"
+      },
+      Siddha: {
+        text: [
+          "Siddha is an ancient Tamil medical system.",
+          "Emphasizes spiritual and physical harmony.",
+          "Treatments include herbs, minerals, and yoga.",
+          "Practices align with universal energies and five elements.",
+          "Widely practiced in South India."
+        ],
+        img: "{{ url_for('static', filename='assets/siddha.avif') }}"
+      },
+      Homeopathy: {
+        text: [
+          "Homeopathy is based on the principle of 'like cures like'.",
+          "Remedies are derived from natural substances.",
+          "Highly diluted solutions are used for treatment.",
+          "Aims to trigger the body’s healing response.",
+          "It is gentle, holistic, and widely used worldwide."
+        ],
+        img: "{{ url_for('static', filename='assets/homeopathy.jpeg') }}"
+      }
+    };
+
+    function openModal(topic) {
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('modal').style.display = 'flex';
+      document.getElementById('modalTitle').textContent = topic;
+      document.getElementById('modalContent').innerHTML = data[topic].text.map(p => `<p>${p}</p>`).join('');
+      document.getElementById('modalImage').src = data[topic].img;
+    }
+
+    function closeModal() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('modal').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

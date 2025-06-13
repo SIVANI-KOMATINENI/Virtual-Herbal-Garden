@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Welcome to the Community</h2>
+<form method="post" enctype="multipart/form-data">
+    Text: <textarea name="text"></textarea><br>
+    Image: <input type="file" name="image"><br>
+    <input type="submit" value="Post">
+</form>
+<hr>
+{% for post in posts %}
+    
+    <div style="height: 500px; overflow-y: scroll;">
+    {% for post in posts %}
+        <p><strong>{{ post.username }}</strong> posted:</p>
+        {% if post.text %}
+            <p>{{ post.text }}</p>
+        {% endif %}
+        {% if post.image_path %}
+            <img src="{{ url_for('static', filename='uploads/' + post.image_path) }}" width="200">
+        {% endif %}
+        <p>❤️ {{ post.like_count }} 
+        {% if not post.liked %}
+            <a href="{{ url_for('like', post_id=post.id) }}">Like</a>
+        {% else %}
+            (Liked)
+        {% endif %}</p>
+    {% endfor %}
+</div>
+
+    <hr>
+{% endfor %}
+<a href="{{ url_for('logout') }}">Logout</a>
+{% endblock %}
